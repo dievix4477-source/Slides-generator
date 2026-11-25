@@ -1,0 +1,1836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Slideshow">
+<meta name="theme-color" content="#09090b">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%2309090b'/%3E%3Crect x='28' y='28' width='124' height='124' rx='28' fill='%2318181f' stroke='%2322d3ee' stroke-width='6'/%3E%3Cpath d='M75 62l42 28-42 28V62z' fill='%23ffffff'/%3E%3C/svg%3E">
+<title>Slideshow generator</title>
+<style>
+  :root {
+    --bg:#09090b;
+    --card:#131316;
+    --line:#25252b;
+    --btn:#1c1c21;
+    --text:#f2f2f5;
+    --muted:#8a8a96;
+    --accent-cyan:#22d3ee;
+    --accent-pink:#f43f5e;
+    --accent-green:#10b981;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin:0 auto; background:var(--bg); color:var(--text); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: calc(16px + env(safe-area-inset-top, 0px)) 16px calc(24px + env(safe-area-inset-bottom, 0px)); max-width:960px; }
+  h1 { font-size:20px; margin:0 0 2px; font-weight:700; }
+  .sub { color:var(--muted); font-size:12.5px; margin-bottom:14px; line-height:1.4; }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:14px; margin-bottom:12px; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+  label { display:block; font-size:11.5px; color:var(--muted); margin-bottom:5px; font-weight:500; }
+  select, textarea, input[type=text] { background:#0c0c0e; color:var(--text); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:16px; max-width:100%; }
+  select { min-width:180px; -webkit-appearance:menulist; appearance:auto; }
+  input[type=file] { font-size:12.5px; color:var(--muted); max-width:100%; }
+  input[type=file]::file-selector-button { background:#232329; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:7px 11px; margin-right:8px; cursor:pointer; font-size:12px; }
+  button { background:var(--btn); color:var(--text); border:1px solid var(--line); border-radius:12px; padding:10px 14px; font-size:13.5px; font-weight:500; cursor:pointer; transition: all 0.15s ease; touch-action: manipulation; user-select: none; -webkit-user-select: none; display:inline-flex; align-items:center; justify-content:center; gap:7px; }
+  button:hover { border-color:#3f3f48; background:#24242b; }
+  button:active { transform: scale(0.98); }
+  button:disabled { opacity:0.42; cursor:not-allowed; }
+  button.primary { background:#fff; color:#000; border-color:#fff; font-weight:600; }
+  button.primary:hover { background:#e6e6e9; }
+  button.sm { padding:5px 9px; font-size:11.5px; border-radius:8px; gap:4px; }
+  .seg { display:flex; width:100%; }
+  .seg button { flex:1; border-radius:0; margin-left:-1px; padding:9px 10px; }
+  .seg button:first-child { border-radius:10px 0 0 10px; margin-left:0; }
+  .seg button:last-child { border-radius:0 10px 10px 0; }
+  .seg button.on { background:#fff; color:#000; font-weight:600; }
+
+  /* Option 3 Pill Navigation Bar for Image Drawers */
+  .pill-bar { display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; margin-bottom:12px; }
+  .pill-btn { border-radius:999px; padding:9px 10px; font-size:12.5px; font-weight:600; background:#141418; border:1.5px solid var(--line); color:var(--text); white-space:nowrap; display:flex; align-items:center; justify-content:center; gap:6px; }
+  .pill-btn .count-badge { background:#27272f; color:#ccc; border-radius:999px; padding:1px 7px; font-size:11px; font-weight:600; }
+  .pill-btn.hook-pill { border-color: rgba(34, 211, 238, 0.45); }
+  .pill-btn.hook-pill.active { background: var(--accent-cyan); color:#000; border-color: var(--accent-cyan); }
+  .pill-btn.hook-pill.active .count-badge { background:rgba(0,0,0,0.2); color:#000; }
+  .pill-btn.topic-pill { border-color: rgba(255, 255, 255, 0.28); }
+  .pill-btn.topic-pill.active { background:#fff; color:#000; border-color:#fff; }
+  .pill-btn.topic-pill.active .count-badge { background:rgba(0,0,0,0.18); color:#000; }
+  .pill-btn.app-pill { border-color: rgba(244, 63, 94, 0.48); }
+  .pill-btn.app-pill.active { background: var(--accent-pink); color:#fff; border-color: var(--accent-pink); }
+  .pill-btn.app-pill.active .count-badge { background:rgba(0,0,0,0.25); color:#fff; }
+
+  .drawer { display:none; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:14px; margin-bottom:12px; }
+  .drawer.open { display:block; }
+
+  /* Top Batch Action Bar: Download All Images + Copy All Text */
+  .top-actions { display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:12px; }
+  .top-actions button { width:100%; padding:12px 10px; border-radius:13px; font-size:13.5px; font-weight:600; }
+
+  /* Option 3 Ultra-Compact Slide Row Layout */
+  .list-stack { display:flex; flex-direction:column; gap:8px; }
+  .slide-row { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:10px 12px; display:grid; grid-template-columns: 58px 1fr auto; gap:12px; align-items:center; }
+  .thumb-box { position:relative; width:58px; height:58px; border-radius:11px; overflow:hidden; background:#1c1c22; border:1px solid #2b2b33; flex-shrink:0; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .thumb-box img { width:100%; height:100%; object-fit:cover; display:block; }
+  .thumb-box .empty-lbl { font-size:9.5px; color:var(--muted); text-align:center; line-height:1.15; padding:4px; }
+  .thumb-box .reroll-photo-mini { position:absolute; bottom:2px; right:2px; width:18px; height:18px; border-radius:50%; background:rgba(0,0,0,0.75); color:#fff; font-size:10px; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.2); }
+
+  .slide-mid { min-width:0; display:flex; flex-direction:column; gap:4px; }
+  .slide-meta-bar { display:flex; align-items:center; gap:6px; }
+  .slide-num { font-size:11.5px; color:var(--muted); font-weight:600; font-variant-numeric: tabular-nums; }
+  .tag { background:#23232b; color:#e4e4eb; border-radius:999px; padding:2px 8px; font-size:10.5px; font-weight:600; }
+  .tag.tag-hook { background:rgba(34,211,238,0.14); color:#67e8f9; }
+  .tag.tag-app { background:rgba(244,63,94,0.15); color:#fda4af; }
+  .mini-reroll { background:transparent; border:none; color:var(--muted); padding:2px 6px; font-size:11px; border-radius:6px; cursor:pointer; }
+  .mini-reroll:hover { color:#fff; background:#23232b; }
+
+  .slide-text { font-size:13.5px; line-height:1.38; color:var(--text); word-break:break-word; outline:none; border-radius:6px; padding:2px 4px; margin-left:-4px; }
+  .slide-text:focus { background:#0c0c0e; box-shadow:0 0 0 1px #3f3f48; }
+
+  /* Option 3 Right-side Compact Vertical Icon Stack Buttons + Green Checkmark state */
+  .row-actions { display:flex; gap:6px; align-items:center; flex-shrink:0; }
+  .act-btn { flex-direction:column; gap:3px; padding:7px 8px; min-width:64px; min-height:54px; border-radius:11px; background:#1a1a20; border:1px solid #2a2a33; color:var(--text); font-size:10px; line-height:1.15; text-align:center; font-weight:500; }
+  .act-btn svg.ico { width:16px; height:16px; }
+  .act-btn.done { background:rgba(16, 185, 129, 0.16); border-color:var(--accent-green); color:#34d399; font-weight:600; }
+
+  .warn { color:#e0a040; font-size:12px; margin-bottom:8px; }
+  .caption-box { font-size:13px; line-height:1.48; white-space:pre-wrap; word-break:break-word; background:#0c0c0e; border:1px solid var(--line); border-radius:10px; padding:10px; margin:5px 0; }
+  .muted { color:var(--muted); font-size:11.5px; }
+  #story { display:none; }
+  #story.show { display:flex; }
+  .upload-controls { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .img-gallery { display:grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap:8px; margin-top:10px; max-height:210px; overflow-y:auto; padding-top:4px; }
+  .img-thumb { position:relative; aspect-ratio: 9/16; border-radius:8px; overflow:hidden; border:1px solid var(--line); background:#0c0c0e; }
+  .img-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+  .img-thumb .del-btn { position:absolute; top:3px; right:3px; width:22px; height:22px; border-radius:50%; background:rgba(0,0,0,0.82); color:#fff; border:1px solid rgba(255,255,255,0.25); font-size:13px; line-height:1; padding:0; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .img-thumb .del-btn:hover { background:#d93838; border-color:#fff; }
+  .img-thumb .topic-badge { position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.75); color:#ddd; font-size:9px; padding:2px 3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center; }
+  svg.ico { width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
+
+  @media (max-width: 640px) {
+    body { padding:10px; }
+    .panel { padding:12px; margin-bottom:10px; }
+    .row > div { width:100%; }
+    .row > div[style*="margin-left:auto"] { margin-left:0 !important; width:100%; }
+    select, input[type=text] { width:100%; min-width:0; }
+    #shuffle, #exportHtmlBtn { width:100%; padding:12px; font-size:14.5px; }
+    .pill-bar { gap:6px; }
+    .pill-btn { padding:8px 6px; font-size:11.5px; gap:4px; }
+    .slide-row { grid-template-columns: 52px 1fr auto; gap:9px; padding:9px 10px; }
+    .thumb-box { width:52px; height:52px; border-radius:10px; }
+    .slide-text { font-size:13px; line-height:1.35; }
+    .act-btn { min-width:58px; min-height:50px; padding:6px 5px; font-size:9.5px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="jsDisabledBanner" class="panel" style="border-color:#e0a040; background:#1f1608; color:#ffd488; font-size:13px; line-height:1.45;">
+  <strong style="color:#fff; display:block; margin-bottom:4px;">⚠️ iPhone / iPad QuickLook Preview Detected (JavaScript Blocked by iOS)</strong>
+  You opened this file inside Apple's built-in file previewer, which disables buttons and scripts. Open this file via <b>tiiny.host</b>, <b>app.netlify.com/drop</b>, or <b>Documents by Readdle</b> so all buttons work on iOS.
+</div>
+
+<div class="row" style="justify-content:space-between; align-items:center; margin-bottom:12px;">
+  <div>
+    <h1>Slideshow generator</h1>
+    <div class="sub" style="margin-bottom:0;">Option 3 Fast-Copy List View. Tap the image pills to upload Hook Images per narrator (Told by), Topic Images, or 3rdi Images.</div>
+  </div>
+  <div>
+    <button type="button" class="sm" id="exportHtmlBtn" title="Downloads a copy of this HTML file with all your uploaded photos permanently baked inside">Save HTML with my photos</button>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="row">
+    <div style="flex:1; min-width:170px;">
+      <label>Topic</label>
+      <select id="topic" style="width:100%;">
+        <option value="Any topic">Any topic</option>
+        <option value="Out alone">Out alone</option>
+        <option value="Strangers & lures">Strangers & lures</option>
+        <option value="Home & online">Home & online</option>
+        <option value="Travel & hotels">Travel & hotels</option>
+        <option value="Cars & parking">Cars & parking</option>
+        <option value="Uber driver">Uber driver</option>
+        <option value="Criminology thesis">Criminology thesis</option>
+        <option value="Mom after prison">Mom after prison</option>
+        <option value="Child crimes investigator">Child crimes investigator</option>
+        <option value="City darkside">City darkside</option>
+      </select>
+    </div>
+    <div style="flex:1; min-width:190px;">
+      <label>Told by</label>
+      <select id="teller" style="width:100%;">
+        <option value="Anyone">Anyone</option>
+        <option value="My aunt, the detective">My aunt, the detective</option>
+        <option value="My aunt, the FBI agent">My aunt, the FBI agent</option>
+        <option value="My aunt, the ICE agent">My aunt, the ICE agent</option>
+        <option value="My aunt, the prison guard">My aunt, the prison guard</option>
+        <option value="My dad, the FBI agent">My dad, the FBI agent</option>
+        <option value="My dad, the ICE agent">My dad, the ICE agent</option>
+        <option value="My dad, the prison guard">My dad, the prison guard</option>
+        <option value="My mom, the FBI agent">My mom, the FBI agent</option>
+        <option value="My mom, the ICE agent">My mom, the ICE agent</option>
+        <option value="My mom, the prison guard">My mom, the prison guard</option>
+        <option value="My uncle, the FBI agent">My uncle, the FBI agent</option>
+        <option value="My uncle, the ICE agent">My uncle, the ICE agent</option>
+        <option value="My uncle, the prison guard">My uncle, the prison guard</option>
+        <option value="My mom, the 911 dispatcher">My mom, the 911 dispatcher</option>
+        <option value="My own story">My own story</option>
+      </select>
+    </div>
+    <div style="min-width:170px;">
+      <label>Slides</label>
+      <div class="seg" id="slideCount">
+        <button type="button" data-n="0" class="on">Auto (7)</button>
+        <button type="button" data-n="6">6</button>
+        <button type="button" data-n="7">7</button>
+        <button type="button" data-n="8">8</button>
+      </div>
+    </div>
+    <div style="margin-left:auto;">
+      <button type="button" class="primary" id="shuffle">Shuffle slideshow</button>
+    </div>
+  </div>
+  <div class="row" id="story" style="margin-top:12px;">
+    <div><label>Who (e.g. aunt, dad, mom)</label><input type="text" id="sWho" placeholder="dad"></div>
+    <div><label>Job</label><input type="text" id="sJob" placeholder="FBI agent"></div>
+    <div><label>Years</label><input type="text" id="sYears" placeholder="26" size="4"></div>
+    <div class="muted" style="max-width:340px;">Use real details only. These fill the hook and closer.</div>
+  </div>
+</div>
+
+<!-- Option 3 Pill Bar: Hook Images (per topic) | Topic Images | 3rdi Images -->
+<div class="pill-bar">
+  <button type="button" class="pill-btn hook-pill" id="btnDrawerHook">
+    <span>Hook Images</span>
+    <span class="count-badge" id="badgeHookCount">0</span>
+  </button>
+  <button type="button" class="pill-btn topic-pill" id="btnDrawerTopic">
+    <span>Topic Images</span>
+    <span class="count-badge" id="badgeTopicCount">0</span>
+  </button>
+  <button type="button" class="pill-btn app-pill" id="btnDrawerApp">
+    <span>3rdi Images</span>
+    <span class="count-badge" id="badgeAppCount">0</span>
+  </button>
+</div>
+
+<!-- Drawer 1: Hook Images (saved individually for each topic) -->
+<div class="drawer" id="drawerHook">
+  <div class="row" style="justify-content:space-between; margin-bottom:6px;">
+    <div>
+      <strong id="hookDrawerTitle">Hook Images for Current Narrator (Told by)</strong>
+      <div class="muted">Upload Hook (Slide 1) background photos specifically for the selected "Told by" narrator. Saved automatically in your browser.</div>
+    </div>
+    <div class="upload-controls">
+      <input type="file" id="uploadHook" accept="image/*" multiple>
+      <button type="button" class="sm" id="clearHookImgs">Clear narrator hooks</button>
+    </div>
+  </div>
+  <div class="muted" id="hookImgCount"></div>
+  <div class="img-gallery" id="hookImgGallery"></div>
+</div>
+
+<!-- Drawer 2: Topic Images (Tips & Closer slides) -->
+<div class="drawer" id="drawerTopic">
+  <div class="row" style="justify-content:space-between; margin-bottom:6px;">
+    <div>
+      <strong id="topicDrawerTitle">Topic Images (Tips &amp; Closer slides)</strong>
+      <div class="muted">Upload background photos for tips and closer slides in this topic. Saved automatically in your browser.</div>
+    </div>
+    <div class="upload-controls">
+      <input type="file" id="upload" accept="image/*" multiple>
+      <button type="button" class="sm" id="clearImgs">Clear topic images</button>
+    </div>
+  </div>
+  <div class="muted" id="imgCount"></div>
+  <div class="img-gallery" id="imgGallery"></div>
+</div>
+
+<!-- Drawer 3: 3rdi Images (Slide 4 Ad) -->
+<div class="drawer" id="drawerApp">
+  <div class="row" style="justify-content:space-between; margin-bottom:6px;">
+    <div>
+      <strong>3rdi Images (Slide 4 Ad Only)</strong>
+      <div class="muted">Upload specific screenshots or photos exclusively for Slide 4 (3rd-i Ad).</div>
+    </div>
+    <div class="upload-controls">
+      <input type="file" id="uploadApp" accept="image/*" multiple>
+      <button type="button" class="sm" id="clearAppImgs">Clear 3rdi images</button>
+    </div>
+  </div>
+  <div class="muted" id="appImgCount"></div>
+  <div class="img-gallery" id="appImgGallery"></div>
+</div>
+
+<div id="output"></div>
+
+<script id="mainScript">
+/*__DEFAULT_LIB_START__*/
+const DEFAULT_LIB = {
+  "topics": {
+    "Any topic": {
+      "any": true,
+      "genericHooks": [
+        "Safety rules that sound extreme until you hear why they exist",
+        "7 small habits that make you a much harder target",
+        "Nobody tells you these until something goes wrong. Save this",
+        "I read what investigators and corrections officers say about how offenders choose targets. These are the rules that keep coming up",
+        "My aunt spent 26 years as an ICE agent. These are her rules for walking anywhere alone at night",
+        "My dad worked child abduction cases for the FBI. Before I moved to New York alone, he made me memorize these",
+        "My mom was a prison guard on the s*x offender wing for 26 years. These are the rules she gave me before I signed my first lease",
+        "My dad was a prison guard for 26 years. He heard how these men talk about the women they picked. These are his rules"
+      ],
+      "hooks": [
+        "My {who} spent {years} years as {job}. These are the rules they gave me",
+        "My aunt spent 26 years as an ICE agent. These are her rules for walking anywhere alone at night",
+        "My dad worked child abduction cases for the FBI. Before I moved to New York alone, he made me memorize these",
+        "My mom was a prison guard on the s*x offender wing for 26 years. These are the rules she gave me before I signed my first lease",
+        "My dad was a prison guard for 26 years. He heard how these men talk about the women they picked. These are his rules"
+      ]
+    },
+    "Out alone": {
+      "genericHooks": [
+        "Rules for walking anywhere alone at night, from people who take them seriously",
+        "Walking home alone? Do these before you leave",
+        "Investigators say offenders pick the easiest option. These rules make you a harder one when you walk alone at night"
+      ],
+      "hooks": [
+        "My aunt spent 26 years as an ICE agent. These are her rules for walking anywhere alone at night",
+        "My {who} spent {years} years as {job}. These are their rules for walking anywhere alone at night",
+        "My {who} worked as {job} for {years} years. This is how they told me to move through a city alone"
+      ],
+      "tips": [
+        "Don't wear a ponytail or a hoodie with the hood up when walking alone at night. A hood blocks your side vision, and both give someone an easy handle to grab from behind.",
+        "Never take the exact same route at the exact same time every day. Not for your run, not for the dog walk, not for work. Stalkers look for a routine they can predict.",
+        "If you feel someone behind you, don't just speed up. Cross the street, then cross back. If they do it too, walk straight into the nearest open store or restaurant.",
+        "Walk facing traffic on quiet streets. It stops a car from pulling up slowly behind you in your blind spot without you seeing it first.",
+        "If a car pulls over to ask for directions, take two big steps backward before you answer. Never lean in close to a car window or a half-open door.",
+        "Wear one earbud, never two—or keep both in with no music playing. Someone watching thinks you can't hear them, while you can hear every footstep behind you.",
+        "If you think someone is following you on foot, turn around, look straight at their face, and check your watch. Offenders hate knowing you can identify them and that someone is expecting you.",
+        "Walk like you know exactly where you're going, even when you're lost. Head up, steady pace. If you need to check your map, step inside a bright shop first.",
+        "Post gym or coffee shop stories after you leave, never while you're still there. A live location tag tells strangers exactly where to find you right now.",
+        "Hold your phone in your hand with the screen unlocked, not buried in your bag. Digging for it takes seconds you won't have, and a visible phone shows you can call for help instantly."
+      ],
+      "images": []
+    },
+    "Strangers & lures": {
+      "genericHooks": [
+        "The lines strangers use to get you to come with them",
+        "If someone does this, walk away. No politeness required"
+      ],
+      "hooks": [
+        "My {who} spent {years} years as {job}. These are the lures they told me to watch for",
+        "My {who} worked as {job} for {years} years. Before I moved out they made me memorize these"
+      ],
+      "tips": [
+        "If you find a random object on your windshield—a flyer, a shirt, a water bottle—don't get out or reach for it. It's a trap to keep you standing outside an unlocked car while distracted. Lock the doors and drive to a busy lot first.",
+        "If someone knocks on your door late at night claiming an emergency and asking to use your phone, keep the door locked and offer to call 911 for them through the closed door.",
+        "In an elevator, always stand right next to the button panel. If someone gets on who makes your stomach drop, press the very next floor and step off right before the doors close.",
+        "Be careful with any adult stranger who needs your help in a way that requires you to walk closer to their car—directions, a lost puppy, carrying boxes. Answer from 10 feet back.",
+        "If you're ever grabbed in public, don't just scream 'Help!' Yell 'I don't know this person!' or 'That's not my dad/boyfriend!' so bystanders know immediately it's not a couple arguing.",
+        "If a stranger says 'Hey, drop your location so I know you got home safe' or asks 'Do you live around here?', never give a real answer. Say your boyfriend or dad is waiting right upstairs.",
+        "You are allowed to be rude. Walk away mid-sentence, ignore them, or say 'No' without explaining. Predators count on women being too polite to make a scene.",
+        "Pressure to hurry is a huge red flag. 'Come on, it'll only take thirty seconds' is a tactic designed to take away your time to think.",
+        "If the same stranger shows up at two different places on the same day—your coffee shop, then your grocery store—don't brush it off as coincidence. Take a discreet photo and tell staff.",
+        "A stranger who is too charming, too fast, is running a test. Compliments combined with questions about whether you're alone is an interview, not a conversation."
+      ],
+      "images": []
+    },
+    "Home & online": {
+      "genericHooks": [
+        "Things you're posting that tell strangers exactly where you live",
+        "Your apartment safety checklist before you sleep tonight"
+      ],
+      "hooks": [
+        "My mom was a prison guard on the s*x offender wing for 26 years. These are the rules she gave me before I signed my first lease",
+        "My {who} spent {years} years as {job}. These are the home and online rules they gave me before my first lease",
+        "My {who} worked as {job} for {years} years. They said these are the first things to fix when you move out"
+      ],
+      "tips": [
+        "Put a pair of big, muddy men's work boots outside your front door if you live alone. It costs $10 at a thrift store and completely changes how a stranger reads your apartment.",
+        "Never post a photo holding your new keys or your lease agreement with the address blurred out. Keys can be duplicated from a clear photo, and light blurs are easy to reverse.",
+        "Replace the tiny half-inch screws in your front door's deadbolt strike plate with 3-inch heavy-duty screws. Most doors kick in only because factory screws sit in soft trim instead of the wall stud.",
+        "Put a thick wooden dowel or cut broomstick in the bottom track of every sliding glass door and ground-floor window. Sliding locks are easy to pop; a solid wood bar in the track isn't.",
+        "When ordering food delivery to your apartment, use a man's first name on the app and select 'Leave at door.' Never open the door until you watch them leave the hallway through the peephole.",
+        "Don't post your vacation plans, post your memories. An airport story tells everyone your apartment is empty right now. Post the exact same photos the day after you get back.",
+        "Take your first name off your apartment buzzer and mailbox. Use only your first initial and last name so strangers at the front door can't tell a woman lives there alone.",
+        "Never prop your building's security door open or hold it for someone walking up behind you. If they belong in the building, they have a key fob.",
+        "Close your blinds and curtains before you turn your indoor lights on at night. Bright lights behind sheer curtains turn your living room into a glowing movie screen from the street.",
+        "Never post photos taken straight out of your bedroom or living room window. Anyone who knows your city can triangulate your exact apartment floor and unit in five minutes."
+      ],
+      "images": []
+    },
+    "Travel & hotels": {
+      "genericHooks": [
+        "Hotel safety habits I never skip",
+        "Traveling alone? Do these in your first 10 minutes in the room"
+      ],
+      "hooks": [
+        "My {who} spent {years} years as {job}. These are the rules they gave me for traveling alone",
+        "My {who} worked as {job} for {years} years. They never let me check in without doing these first"
+      ],
+      "tips": [
+        "If the front desk clerk says your room number out loud during check-in, ask for a different room immediately and have them write the new number down. You never know who is listening in the lobby.",
+        "Hang the 'Do Not Disturb' sign on the outside handle and leave the TV playing on low volume every time you leave your hotel room. It makes anyone in the hallway assume someone is inside.",
+        "Always request a hotel room between the 3rd and 6th floors. Rooms on the 1st and 2nd floors are the easiest to break into, and anything above the 6th floor is too high for most fire truck ladders.",
+        "When checking into a hotel or riding in a taxi in a new city, casually mention 'My husband/dad is meeting me in the lobby in ten minutes.' Never volunteer that you're traveling solo.",
+        "Throw a cheap rubber doorstop wedge in your carry-on and kick it under your hotel room door before you go to sleep. Even a master keycard can't push past a wedged door from the outside.",
+        "Never open your hotel room door to someone claiming to be room service, maintenance, or security if you didn't request them. Call the front desk on the room phone to verify first.",
+        "Count the exact number of doors between your room and the emergency stairwell the minute you check in. If the hallway fills with smoke or the lights cut out, you can find the exit blind.",
+        "Keep a photocopy of your passport, ID, and an backup credit card zipped in your suitcase lining separate from your purse. If your bag is snatched, you aren't stranded.",
+        "Share your live location and your exact hotel name and room number with someone back home before you go out exploring, and set a daily check-in text time."
+      ],
+      "images": []
+    },
+    "Cars & parking": {
+      "genericHooks": [
+        "The 5 seconds after you get in your car matter most",
+        "Parking lot rules I'd tell my sister"
+      ],
+      "hooks": [
+        "My {who} spent {years} years as {job}. These are the car rules they made me follow",
+        "My {who} worked as {job} for {years} years. They said most attacks happen right around the car"
+      ],
+      "tips": [
+        "Lock your car doors the exact second you sit down—before you buckle your seatbelt, before you put your purse down, and before you check your phone. Sitting in an unlocked parked car is the #1 blind spot.",
+        "If you think a car is following you, make four right turns in a row. Nobody drives in a full circle by accident. If they're still behind you, drive straight to a police station—never drive home.",
+        "Never save your actual house as 'Home' in your car's GPS, and don't keep mail with your address in the glove box. If your car is broken into at the mall, they have your garage opener and your address.",
+        "If a large van or SUV with tinted windows is parked right next to your driver's side door, walk around and climb in through the passenger side—or ask store security to walk you out.",
+        "At red lights at night, stop far enough back that you can see the rear tires of the car in front of you touching the asphalt. That gives you enough room to swerve out and escape if someone approaches your window.",
+        "Always check the back seat and floorboard through the rear window before you unlock your car. It takes two seconds and is the very first habit police officers teach their families.",
+        "Change your car settings so pressing unlock on your key fob once only unlocks the driver's door, not all four doors. That stops anyone from slipping into the passenger side while you get in.",
+        "If you get a flat tire at night in a dark area, turn on your hazards and drive slowly on the flat rim until you reach a bright gas station. Replacing a bent rim is nothing compared to your safety.",
+        "Have your keys in your hand before you walk out of the building, never while standing beside your car digging through your purse with your head down.",
+        "Always back into parking spaces or pull through so your car is facing out under a streetlight. If you need to leave fast, you never want to waste time backing out of a tight spot."
+      ],
+      "images": []
+    },
+    "Uber driver": {
+      "genericHooks": [
+        "Rideshare rules before you get in any car",
+        "Before you get in an Uber, do these 4 things"
+      ],
+      "hooks": [
+        "My {who} spent {years} years as {job}. These are the rideshare rules they gave me",
+        "My {who} drove rideshare for {years} years. This is what they check before every single ride"
+      ],
+      "tips": [
+        "Test the inside door handle before you pull the car door completely shut. Testing it right as you get in makes sure the child safety lock isn't engaged before the car starts moving.",
+        "Before you step in, open the door and ask 'Who are you picking up?' Never say 'Are you here for [Your Name]?' A fake driver will always say yes.",
+        "When a driver asks 'Is this your apartment?' or 'Do you live here?', always say you're being dropped off at your boyfriend's or parents' place. They already have the address—don't tell them you live alone.",
+        "Set your drop-off pin two doors down from your actual house or apartment building, and wait until the car drives completely down the block before walking up to your front door.",
+        "Sit in the back seat directly behind the empty front passenger seat. It gives you the widest view of the driver, the most distance, and lets you exit onto the sidewalk instead of into traffic.",
+        "Screenshot the ride screen—driver's face, name, car model, and license plate—and text it to a friend before you get in. If the app crashes or your battery dies, someone has the exact plate.",
+        "Wait inside the restaurant, lobby, or store until the app shows the car is physically sitting at the curb. Standing outside alone on a dark sidewalk staring at your phone makes you an easy target.",
+        "If the driver misses a turn or goes off the GPS route, don't wait five minutes to see where they're going. Speak up immediately or pretend to answer a phone call: 'Hey Dad, I'm two minutes away, see you outside.'",
+        "Turn on the 4-digit Ride Verification PIN in your Uber and Lyft safety settings so the ride physically cannot start in the app until the driver enters your code."
+      ],
+      "images": []
+    },
+    "Criminology thesis": {
+      "genericHooks": [
+        "I read hundreds of case studies for my criminology thesis. Here's what actually matters",
+        "What the research says about who gets targeted, and why"
+      ],
+      "hooks": [
+        "I spent a year researching violent crime for my criminology thesis. These are the patterns that stuck with me",
+        "My {who} is a {job} and helped with my criminology thesis. These are the findings I use in real life"
+      ],
+      "tips": [
+        "In interviews with convicted offenders, almost all of them say they test a target first with a small boundary violation—a weird question, standing too close, touching your arm. A loud, firm 'No, step back' fails their test immediately.",
+        "Offenders consistently say they pass on women who make direct eye contact and look back at them twice. Looking someone in the eyes signals that you aren't startled and can describe their face to police.",
+        "Studies on street crime show body language is the #1 filter before someone approaches: stride length, head angle, and arm swing. Walking with your chin up and shoulders back makes you look like a hard target.",
+        "Most targeted crimes aren't random—they rely on predictable schedules. Varying your departure time by just 15 minutes and rotating between two routes destroys a stalker's ability to plan.",
+        "Researchers found that wearing over-ear headphones while looking down at a glowing phone screen is the single most common trait offenders look for when picking someone on a sidewalk.",
+        "Criminologists call it the 'Crime Triangle': a motivated offender, a suitable target, and no capable guardian watching. Stepping into a well-lit convenience store or near a security camera breaks the triangle instantly.",
+        "Your brain processes micro-expressions, footsteps, and peripheral shadows faster than your conscious thoughts. When your stomach drops for 'no reason,' it's actually pattern recognition—listen to it."
+      ],
+      "images": []
+    },
+    "Mom after prison": {
+      "genericHooks": [
+        "Years working inside a prison taught one person these rules for dating and meeting new people",
+        "What you learn about how people talk about targets when you work in a prison",
+        "People who work inside prisons hear how offenders talk about who they pick. These are the rules that come up again and again"
+      ],
+      "hooks": [
+        "My mom was a prison guard on the s*x offender wing for 26 years. These are the rules she gave me before I signed my first lease",
+        "My dad was a prison guard for 26 years. He heard how these men talk about the women they picked. These are his rules",
+        "My {who} spent {years} years as {job}. These are the rules they gave me before I signed my first lease",
+        "My {who} worked as {job} for {years} years. After hearing how people talk about who they pick, these are their rules"
+      ],
+      "tips": [
+        "Want to see a new person's true colors fast? Tell them 'no' to something small early on—like changing the restaurant or declining a late-night hangout. How someone handles a small 'no' tells you everything about how they handle a big one.",
+        "On a first date, always drive yourself or order your own rideshare—and walk to your car alone afterward so they don't see your license plate or try to 'walk you to your door.'",
+        "Before any first meetup, send a friend a screenshot of their dating profile, their phone number, where you're going, and a dead-man's switch: 'If I don't text you by 9:30pm, call me.'",
+        "Never give your exact apartment building or home address to someone you just started seeing, a new coworker, or a gym acquaintance. Meet at the coffee shop two blocks away.",
+        "Fast charm is a tactic, not romance. When someone love-bombs you, texts 24/7, and pushes to know your daily schedule in week one, they are building control, not connection.",
+        "Watch out for anyone who tries to move you to a second, more isolated location on a first meetup—'Let's go walk by the river' or 'Come see my dog at my place.' Stay where there are waiters and cameras.",
+        "If your gut says leave ten minutes into a date, you don't owe them polite closure. Excuse yourself to the restroom, ask the staff to walk you out the back, and block their number."
+      ],
+      "images": []
+    },
+    "Child crimes investigator": {
+      "genericHooks": [
+        "Rules from someone who investigated crimes against kids, for every parent and older sibling",
+        "What child safety investigators wish every family knew",
+        "Investigators who work child abduction cases repeat the same rules. Memorize these before you move somewhere alone"
+      ],
+      "hooks": [
+        "My dad worked child abduction cases for the FBI. Before I moved to New York alone, he made me memorize these",
+        "My {who} spent {years} years as {job}, working child cases. Before I moved to a new city alone, they made me memorize these",
+        "My {who} worked as {job} for {years} years. These are the rules they taught me for kids and for myself"
+      ],
+      "tips": [
+        "Drill this one rule into every kid and younger sibling: 'Safe adults NEVER ask kids for help.' An adult who needs help finding a lost puppy or carrying groceries will ask another adult.",
+        "Create a secret family code word. If anyone ever pulls up and says 'Your mom got in an accident and told me to pick you up,' and they don't know the code word, run the opposite way.",
+        "Stop teaching 'stranger danger' alone—teach 'no secrets from parents.' Tell kids the difference between a surprise (like a birthday gift everyone finds out about soon) and a secret someone tells you to hide forever.",
+        "Never post back-to-school photos on public social media showing a child's school logo on their uniform, their teacher's name, their bus number, or your front porch house numbers.",
+        "Before going to a crowded park, airport, or mall, snap a quick photo of your kids on your phone that morning. If you get separated in a panic, you have an exact photo of what they're wearing and their shoes right now.",
+        "Write your phone number on your child's inner wrist in permanent marker and cover it with liquid bandage before big events—and teach them to look for a mom with kids if they ever get lost.",
+        "Check every game your kid plays that has an open chat feature or DMs. Groomers rarely look scary—they pose as another 12-year-old offering free in-game currency and compliments.",
+        "Never put bumper stickers on your back windshield that list your kids' names, their stick-figure ages, their cheer gym, or their honor-roll elementary school. That's a dossier for any car behind you."
+      ],
+      "images": []
+    },
+    "City darkside": {
+      "genericHooks": [
+        "The side of the city nobody warns you about when you move",
+        "Nightlife safety rules I follow every single time"
+      ],
+      "hooks": [
+        "My {who} spent {years} years as {job}. These are their rules for going out at night in a big city",
+        "My {who} worked as {job} for {years} years. Before I moved to the city alone, they gave me these"
+      ],
+      "tips": [
+        "If you suddenly feel way more dizzy or intoxicated than the one drink you've had, don't go to the bathroom alone to 'splash water on your face.' That's where people pass out unseen. Grab your friend or the bartender immediately.",
+        "Watch the bartender pour your drink, hold your glass with your palm or thumb covering the top, and never finish a drink that left your line of sight for even five seconds.",
+        "If someone is creeping on you at a bar, club, or late-night diner, don't try to sneak out to the street alone. Tell the bartender or bouncer straight up: 'That guy is watching me, can you walk me to my Uber when it pulls up?'",
+        "Set up your phone's Emergency SOS shortcut (pressing the side lock button 5 times fast) before you go out. You can trigger it inside your coat pocket without ever pulling your phone out.",
+        "Make one ironclad rule with your friend group before the first drink is poured: we arrive together, we leave together. The people who prey on nightlife scenes wait for the one friend who gets separated.",
+        "Never walk home alone late at night in heels with your head down on your phone. Order a ride straight from door to door and wait inside the venue until the driver is outside.",
+        "Slip a backup ID, a $20 bill, and one credit card inside your boot or an inner zip pocket separate from your phone case. If your phone or purse gets snatched at 1am, you can still get home.",
+        "Learn which blocks in your neighborhood go dead after 10pm. A shortcut through a park or side street that's totally fine at 5pm is a completely different world at 1am."
+      ],
+      "images": []
+    }
+  },
+  "tellers": {
+    "Anyone": {
+      "who": "anyone",
+      "closers": [
+        "Being prepared is way less exhausting than being scared. You do these once and they become habits.",
+        "None of this is about living in fear. It's about being a harder target so you never have to find out.",
+        "Pick one of these and start tonight. Habits are what keep you safe when you can't think."
+      ]
+    },
+    "My aunt, the detective": {
+      "who": "aunt",
+      "job": "a detective",
+      "years": "26",
+      "hooks": [
+        "My aunt spent 26 years as a detective. These are her rules for walking anywhere alone at night",
+        "My aunt worked cases as a detective for 26 years. Before I moved out alone, she made me memorize these",
+        "My aunt was a detective for 26 years. These are the rules she gave me before I signed my first lease"
+      ],
+      "closers": [
+        "For years I thought my aunt was obsessed with the worst thing that could happen. The rules were never about scaring me. They were her way of making sure I'd be okay.",
+        "My aunt spent a career around the worst days of other people's lives. These rules are how she tried to keep me out of that world.",
+        "I used to roll my eyes at these. I don't anymore."
+      ]
+    },
+    "My aunt, the FBI agent": {
+      "who": "aunt",
+      "job": "an FBI agent",
+      "years": "26",
+      "hooks": [
+        "My aunt spent 26 years as an FBI agent. These are her rules for walking anywhere alone at night",
+        "My aunt worked child abduction cases for the FBI. Before I moved to New York alone, she made me memorize these",
+        "My aunt was an FBI agent for 26 years. These are the rules she gave me before I signed my first lease"
+      ],
+      "closers": [
+        "For years I thought my aunt was obsessed with the worst thing that could happen. The rules were never about scaring me. They were her way of making sure I'd be okay.",
+        "My aunt spent a career around the worst days of other people's lives. These rules are how she tried to keep me out of that world.",
+        "I used to roll my eyes at these. I don't anymore."
+      ]
+    },
+    "My aunt, the ICE agent": {
+      "who": "aunt",
+      "job": "an ICE agent",
+      "years": "26",
+      "hooks": [
+        "My aunt spent 26 years as an ICE agent. These are her rules for walking anywhere alone at night",
+        "My aunt worked as an ICE agent for 26 years. Before I moved to New York alone, she made me memorize these",
+        "My aunt was an ICE agent for 26 years. These are the rules she gave me before I signed my first lease"
+      ],
+      "closers": [
+        "For years I thought my aunt was obsessed with the worst thing that could happen. The rules were never about scaring me. They were her way of making sure I'd be okay.",
+        "My aunt spent a career around the worst days of other people's lives. These rules are how she tried to keep me out of that world.",
+        "I used to roll my eyes at these. I don't anymore."
+      ]
+    },
+    "My aunt, the prison guard": {
+      "who": "aunt",
+      "job": "a prison guard",
+      "years": "26",
+      "hooks": [
+        "My aunt was a prison guard on the s*x offender wing for 26 years. These are the rules she gave me before I signed my first lease",
+        "My aunt was a prison guard for 26 years. She heard how these men talk about the women they picked. These are her rules",
+        "My aunt spent 26 years as a prison guard. These are her rules for walking anywhere alone at night"
+      ],
+      "closers": [
+        "For years I thought my aunt was obsessed with the worst thing that could happen. The rules were never about scaring me. They were her way of making sure I'd be okay.",
+        "My aunt spent a career around the worst days of other people's lives. These rules are how she tried to keep me out of that world.",
+        "I used to roll my eyes at these. I don't anymore."
+      ]
+    },
+    "My dad, the FBI agent": {
+      "who": "dad",
+      "job": "an FBI agent",
+      "years": "26",
+      "hooks": [
+        "My dad worked child abduction cases for the FBI. Before I moved to New York alone, he made me memorize these",
+        "My dad spent 26 years as an FBI agent. These are his rules for walking anywhere alone at night",
+        "My dad was an FBI agent for 26 years. These are the rules he gave me before I signed my first lease"
+      ],
+      "closers": [
+        "For years I thought my dad was obsessed with the worst thing that could happen. The rules were never about scaring me. They were his way of making sure I'd be okay.",
+        "My dad spent a career around the worst days of other people's lives. These rules are how he tried to keep me out of that world.",
+        "I used to roll my eyes at these. I don't anymore."
+      ]
+    },
+    "My dad, the ICE agent": {
+      "who": "dad",
+      "job": "an ICE agent",
+      "years": "26",
+      "hooks": [
+        "My dad spent 26 years as an ICE agent. These are his rules for walking anywhere alone at night",
+        "My dad worked as an ICE agent for 26 years. Before I moved to New York alone, he made me memorize these",
+        "My dad was an ICE agent for 26 years. These are the rules he gave me before I signed my first lease"
+      ],
+      "closers": [
+        "For years I thought my dad was obsessed with the worst thing that could happen. The rules were never about scaring me. They were his way of making sure I'd be okay.",
+        "My dad spent a career around the worst days of other people's lives. These rules are how he tried to keep me out of that world.",
+        "I used to roll my eyes at these. I don't anymore."
+      ]
+    },
+    "My dad, the prison guard": {
+      "who": "dad",
+      "job": "a prison guard",
+      "years": "26",
+      "hooks": [
+        "My dad was a prison guard for 26 years. He heard how these men talk about the women they picked. These are his rules",
+        "My dad was a prison guard on the s*x offender wing for 26 years. These are the rules he gave me before I signed my first lease",
+        "My dad spent 26 years as a prison guard. These are his rules for walking anywhere alone at night"
+      ],
+      "closers": [
+        "For years I thought my dad was obsessed with the worst thing that could happen. The rules were never about scaring me. They were his way of making sure I'd be okay.",
+        "My dad spent a career around the worst days of other people's lives. These rules are how he tried to keep me out of that world.",
+        "I used to roll my eyes at these. I don't anymore."
+      ]
+    },
+    "My mom, the FBI agent": {
+      "who": "mom",
+      "job": "an FBI agent",
+      "years": "26",
+      "hooks": [
+        "My mom worked child abduction cases for the FBI. Before I moved to New York alone, she made me memorize these",
+        "My mom spent 26 years as an FBI agent. These are her rules for walking anywhere alone at night",
+        "My mom was an FBI agent for 26 years. These are the rules she gave me before I signed my first lease"
+      ],
+      "closers": [
+        "For years I thought my mom was obsessed with the worst thing that could happen. The rules were never about scaring me. They were her way of making sure I'd be okay.",
+        "My mom spent a career around the worst days of other people's lives. These rules are how she tried to keep me out of that world.",
+        "I used to roll my eyes at these. I don't anymore."
+      ]
+    },
+    "My mom, the ICE agent": {
+      "who": "mom",
+      "job": "an ICE agent",
+      "years": "26",
+      "hooks": [
+        "My mom spent 26 years as an ICE agent. These are her rules for walking anywhere alone at night",
+        "My mom worked as an ICE agent for 26 years. Before I moved to New York alone, she made me memorize these",
+        "My mom was an ICE agent for 26 years. These are the rules she gave me before I signed my first lease"
+      ],
+      "closers": [
+        "For years I thought my mom was obsessed with the worst thing that could happen. The rules were never about scaring me. They were her way of making sure I'd be okay.",
+        "My mom spent a career around the worst days of other people's lives. These rules are how she tried to keep me out of that world.",
+        "I used to roll my eyes at these. I don't anymore."
+      ]
+    },
+    "My mom, the prison guard": {
+      "who": "mom",
+      "job": "a prison guard",
+      "years": "26",
+      "hooks": [
+        "My mom was a prison guard on the s*x offender wing for 26 years. These are the rules she gave me before I signed my first lease",
+        "My mom was a prison guard for 26 years. She heard how these men talk about the women they picked. These are her rules",
+        "My mom spent 26 years as a prison guard. These are her rules for walking anywhere alone at night"
+      ],
+      "closers": [
+        "For years I thought my mom was obsessed with the worst thing that could happen. The rules were never about scaring me. They were her way of making sure I'd be okay.",
+        "My mom spent a career around the worst days of other people's lives. These rules are how she tried to keep me out of that world.",
+        "I used to roll my eyes at these. I don't anymore."
+      ]
+    },
+    "My uncle, the FBI agent": {
+      "who": "uncle",
+      "job": "an FBI agent",
+      "years": "26",
+      "hooks": [
+        "My uncle worked child abduction cases for the FBI. Before I moved to New York alone, he made me memorize these",
+        "My uncle spent 26 years as an FBI agent. These are his rules for walking anywhere alone at night",
+        "My uncle was an FBI agent for 26 years. These are the rules he gave me before I signed my first lease"
+      ],
+      "closers": [
+        "For years I thought my uncle was obsessed with the worst thing that could happen. The rules were never about scaring me. They were his way of making sure I'd be okay.",
+        "My uncle spent a career around the worst days of other people's lives. These rules are how he tried to keep me out of that world.",
+        "I used to roll my eyes at these. I don't anymore."
+      ]
+    },
+    "My uncle, the ICE agent": {
+      "who": "uncle",
+      "job": "an ICE agent",
+      "years": "26",
+      "hooks": [
+        "My uncle spent 26 years as an ICE agent. These are his rules for walking anywhere alone at night",
+        "My uncle worked as an ICE agent for 26 years. Before I moved to New York alone, he made me memorize these",
+        "My uncle was an ICE agent for 26 years. These are the rules he gave me before I signed my first lease"
+      ],
+      "closers": [
+        "For years I thought my uncle was obsessed with the worst thing that could happen. The rules were never about scaring me. They were his way of making sure I'd be okay.",
+        "My uncle spent a career around the worst days of other people's lives. These rules are how he tried to keep me out of that world.",
+        "I used to roll my eyes at these. I don't anymore."
+      ]
+    },
+    "My uncle, the prison guard": {
+      "who": "uncle",
+      "job": "a prison guard",
+      "years": "26",
+      "hooks": [
+        "My uncle was a prison guard for 26 years. He heard how these men talk about the women they picked. These are his rules",
+        "My uncle was a prison guard on the s*x offender wing for 26 years. These are the rules he gave me before I signed my first lease",
+        "My uncle spent 26 years as a prison guard. These are his rules for walking anywhere alone at night"
+      ],
+      "closers": [
+        "For years I thought my uncle was obsessed with the worst thing that could happen. The rules were never about scaring me. They were his way of making sure I'd be okay.",
+        "My uncle spent a career around the worst days of other people's lives. These rules are how he tried to keep me out of that world.",
+        "I used to roll my eyes at these. I don't anymore."
+      ]
+    },
+    "My mom, the 911 dispatcher": {
+      "who": "mom",
+      "job": "a 911 dispatcher",
+      "years": "26",
+      "hooks": [
+        "My mom spent 26 years as a 911 dispatcher. These are her rules for walking anywhere alone at night",
+        "My mom was a 911 dispatcher for 26 years. These are the rules she gave me before I signed my first lease",
+        "My mom worked as a 911 dispatcher for 26 years. Before I moved to New York alone, she made me memorize these"
+      ],
+      "closers": [
+        "For years I thought my mom was obsessed with the worst thing that could happen. The rules were never about scaring me. They were her way of making sure I'd be okay.",
+        "My mom spent a career around the worst days of other people's lives. These rules are how she tried to keep me out of that world.",
+        "I used to roll my eyes at these. I don't anymore."
+      ]
+    },
+    "My own story": {
+      "templated": true,
+      "closers": [
+        "For years I thought my {who} was obsessed with the worst thing that could happen. The rules were never about scaring me. They were a way of making sure I'd be okay.",
+        "My {who} spent a career around the worst days of other people's lives. These rules are how they tried to keep me out of that world.",
+        "I used to roll my eyes at these. I don't anymore."
+      ]
+    }
+  },
+  "app": [
+    "If something feels off and you can't call anyone, open 3rd-i and connect to a Safety Agent. A real, trained person watches your stream and stays with you.",
+    "When you can't talk or text, 3rd-i connects you to a Safety Agent. A real, trained person can see what's happening and stays with you until you're safe.",
+    "Walking somewhere that feels off? Open 3rd-i and start a stream. A Safety Agent watches in real time and stays on with you."
+  ],
+  "captions": [
+    {
+      "title": "the rules i actually live by",
+      "description": "not paranoid just prepared. btw 3rd-i: Safety In Real Time is the app i mentioned on slide 4. it connects you to a real trained Safety Agent who watches your live stream when something feels off. honestly being prepared is way less exhausting than being scared. you do these once and they turn into habits.\n\n#womensafety #personalsafety #girlssafety #situationalawareness #3rdiapp",
+      "comment": "download \"3rd-i: Safety In Real Time\" on the App Store"
+    },
+    {
+      "title": "save this before you go out tonight",
+      "description": "none of this is about living in fear. it's about making yourself a harder target so people pass right over you. the app i keep on my home screen is 3rd-i: Safety In Real Time in case i ever need a real person watching my back on a walk home. pick one habit from this list and start tonight.\n\n#womensafety #personalsafety #girlssafety #safetytips #3rdiapp",
+      "comment": "3rd-i: Safety In Real Time is on the App Store"
+    },
+    {
+      "title": "things i wish i knew before moving out alone",
+      "description": "small habits make the biggest difference when you live or walk alone. most of this is just making yourself way less predictable. i also keep 3rd-i: Safety In Real Time on my phone so a trained Safety Agent can watch my live camera stream anytime a street feels off.\n\n#womensafety #personalsafety #girlssafety #livingalone #3rdiapp",
+      "comment": "download \"3rd-i: Safety In Real Time\" on the App Store"
+    },
+    {
+      "title": "send this to your sister or best friend",
+      "description": "we aren't taught half of these until after we have a scary moment. memorize the car and walking rules especially. and if you walk home after dark, get 3rd-i: Safety In Real Time—it lets you stream live to a trained Safety Agent who stays with you until you're inside.\n\n#womensafety #personalsafety #girlssafety #walkingalone #3rdiapp",
+      "comment": "search \"3rd-i: Safety In Real Time\" on the App Store"
+    },
+    {
+      "title": "rules that sound extreme until you need them",
+      "description": "i used to roll my eyes at some of these until i realized how much predators rely on us being distracted and polite. keep your head up, lock your doors immediately, and use 3rd-i: Safety In Real Time whenever you want a real trained agent watching your stream in real time.\n\n#womensafety #personalsafety #girlssafety #selfdefense #3rdiapp",
+      "comment": "download \"3rd-i: Safety In Real Time\" on the App Store"
+    },
+    {
+      "title": "non-negotiable safety habits for your 20s",
+      "description": "you never owe a stranger politeness if your gut says something is wrong. save this slideshow for your next trip or night out. btw the app on slide 4 is 3rd-i: Safety In Real Time—it connects you to a live Safety Agent when you can't call or text.\n\n#womensafety #personalsafety #girlssafety #nightout #3rdiapp",
+      "comment": "get \"3rd-i: Safety In Real Time\" on the App Store"
+    },
+    {
+      "title": "how to make yourself a way harder target",
+      "description": "offenders always look for the easiest, most distracted option. changing two or three small routines takes you off their radar completely. for the times you still have to walk somewhere sketchy alone, 3rd-i: Safety In Real Time puts a trained Safety Agent on your live video stream instantly.\n\n#womensafety #personalsafety #girlssafety #streetsmart #3rdiapp",
+      "comment": "download \"3rd-i: Safety In Real Time\" on the App Store"
+    },
+    {
+      "title": "safety checklist every girl should memorize",
+      "description": "number 1 and number 3 have saved me more times than i can count. share this with the girls in your group chat. and definitely check out 3rd-i: Safety In Real Time on the App Store so you always have a trained Safety Agent one tap away.\n\n#womensafety #personalsafety #girlssafety #safetyfirst #3rdiapp",
+      "comment": "3rd-i: Safety In Real Time is available on the App Store"
+    },
+    {
+      "title": "i stopped being polite and started doing these",
+      "description": "politeness is what bad people count on. trust your instincts the first second your stomach drops. i also downloaded 3rd-i: Safety In Real Time after hearing about it—having a live Safety Agent watch your stream when you can't talk on the phone is a game changer.\n\n#womensafety #personalsafety #girlssafety #trustyourgut #3rdiapp",
+      "comment": "download \"3rd-i: Safety In Real Time\" on the App Store"
+    },
+    {
+      "title": "read this before your next uber or late walk",
+      "description": "takes 30 seconds to read and costs zero dollars to turn these into daily habits. if you ever feel followed or uneasy in a rideshare or parking lot, open 3rd-i: Safety In Real Time and let a real trained agent monitor your stream until you're safe.\n\n#womensafety #personalsafety #girlssafety #staysafe #3rdiapp",
+      "comment": "search \"3rd-i: Safety In Real Time\" on the App Store"
+    }
+  ],
+  "appImages": [],
+  "tellerHookImages": {
+    "My aunt, the detective": [],
+    "My aunt, the FBI agent": [],
+    "My aunt, the ICE agent": [],
+    "My aunt, the prison guard": [],
+    "My dad, the FBI agent": [],
+    "My dad, the ICE agent": [],
+    "My dad, the prison guard": [],
+    "My mom, the FBI agent": [],
+    "My mom, the ICE agent": [],
+    "My mom, the prison guard": [],
+    "My uncle, the FBI agent": [],
+    "My uncle, the ICE agent": [],
+    "My uncle, the prison guard": [],
+    "My mom, the 911 dispatcher": [],
+    "My own story": []
+  }
+};
+/*__DEFAULT_LIB_END__*/
+
+const $ = id => document.getElementById(id);
+const topicSel = $('topic'), tellerSel = $('teller'), output = $('output');
+let LIB = JSON.parse(JSON.stringify(DEFAULT_LIB));
+let uploaded = {};
+let removedDefaults = {};
+let slideChoice = 0;
+let currentState = null;
+let activeDrawer = null; // 'hook' | 'topic' | 'app' | null
+const APP_IMG_KEY = '__APP_SLIDE_4__';
+const HOOK_TELLER_PREFIX = '__HOOK_TELLER__';
+
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const shuffle = a => { const r = [...a]; for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; } return r; };
+const pick = (a, n) => shuffle(a).slice(0, n);
+
+function toggleDrawer(which) {
+  activeDrawer = (activeDrawer === which) ? null : which;
+  $('drawerHook').classList.toggle('open', activeDrawer === 'hook');
+  $('drawerTopic').classList.toggle('open', activeDrawer === 'topic');
+  $('drawerApp').classList.toggle('open', activeDrawer === 'app');
+  $('btnDrawerHook').classList.toggle('active', activeDrawer === 'hook');
+  $('btnDrawerTopic').classList.toggle('active', activeDrawer === 'topic');
+  $('btnDrawerApp').classList.toggle('active', activeDrawer === 'app');
+}
+
+$('btnDrawerHook').onclick = () => toggleDrawer('hook');
+$('btnDrawerTopic').onclick = () => toggleDrawer('topic');
+$('btnDrawerApp').onclick = () => toggleDrawer('app');
+
+function fileToJpegDataUrl(file, maxW = 1080, quality = 0.92) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const im = new Image();
+      im.onload = () => {
+        let w = im.naturalWidth || 1080, h = im.naturalHeight || 1920;
+        if (w > maxW) {
+          h = Math.round(h * (maxW / w));
+          w = maxW;
+        }
+        const c = document.createElement('canvas');
+        c.width = w;
+        c.height = h;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(im, 0, 0, w, h);
+        resolve(c.toDataURL('image/jpeg', quality));
+      };
+      im.onerror = () => resolve(e.target.result);
+      im.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function hookTellerKey(teller) {
+  return HOOK_TELLER_PREFIX + teller;
+}
+
+// Specific topics (excluding "Any topic") and specific tellers (excluding "Anyone" and "My own story")
+function specificTopicsList() {
+  return Object.keys(LIB.topics).filter(k => !LIB.topics[k]?.any);
+}
+
+function specificTellersList() {
+  return Object.keys(LIB.tellers).filter(k => k !== 'Anyone' && !LIB.tellers[k]?.templated);
+}
+
+// Hook images based on "Told by" narrator (if "Anyone" is selected in the dropdown, gallery shows all narrators' hook images)
+function hookImageItemsForTeller(teller) {
+  const isAnyTeller = (teller === 'Anyone');
+  const names = isAnyTeller ? Object.keys(LIB.tellers).filter(k => k !== 'Anyone') : [teller];
+  const allKeys = isAnyTeller ? [hookTellerKey('Anyone'), ...names.map(hookTellerKey)] : [hookTellerKey(teller)];
+  return allKeys.flatMap(key => {
+    const tName = key.replace(HOOK_TELLER_PREFIX, '');
+    const defaults = (LIB.tellerHookImages?.[tName] || []).filter(u => !(removedDefaults[key] || []).includes(u));
+    return [
+      ...defaults.map(u => ({ id: null, url: u, topic: key, label: tName, isDefault: true })),
+      ...(uploaded[key] || []).map(x => ({ ...x, label: tName }))
+    ];
+  });
+}
+
+function hookImagesForTeller(teller) {
+  return hookImageItemsForTeller(teller).map(x => x.url);
+}
+
+function allTips() { return Object.values(LIB.topics).flatMap(t => t.tips || []); }
+function tipsFor(topic) { return LIB.topics[topic]?.any ? allTips() : (LIB.topics[topic]?.tips || []); }
+
+function imageItemsFor(topic) {
+  const names = LIB.topics[topic]?.any ? specificTopicsList() : [topic];
+  const list = LIB.topics[topic]?.any ? ['Any topic', ...names] : [topic];
+  return list.flatMap(n => {
+    const defaults = (LIB.topics[n]?.images || []).filter(u => !(removedDefaults[n] || []).includes(u));
+    return [
+      ...defaults.map(u => ({ id: null, url: u, topic: n, isDefault: true })),
+      ...(uploaded[n] || [])
+    ];
+  });
+}
+
+function imagesFor(topic) {
+  return imageItemsFor(topic).map(item => item.url);
+}
+
+function appImageItems() {
+  const defaults = (LIB.appImages || []).filter(u => !(removedDefaults[APP_IMG_KEY] || []).includes(u));
+  return [
+    ...defaults.map(u => ({ id: null, url: u, topic: APP_IMG_KEY, isDefault: true })),
+    ...(uploaded[APP_IMG_KEY] || [])
+  ];
+}
+
+function appImages() {
+  return appImageItems().map(item => item.url);
+}
+
+function fillSelects() {
+  const ct = topicSel.value, cn = tellerSel.value;
+  topicSel.innerHTML = Object.keys(LIB.topics).map(k => `<option value="${esc(k)}">${esc(k)}</option>`).join('');
+  tellerSel.innerHTML = Object.keys(LIB.tellers).map(k => `<option value="${esc(k)}">${esc(k)}</option>`).join('');
+  if (LIB.topics[ct]) topicSel.value = ct;
+  if (LIB.tellers[cn]) tellerSel.value = cn;
+  refresh();
+}
+
+function renderHookGallery() {
+  const gal = $('hookImgGallery');
+  const teller = tellerSel.value;
+  const items = hookImageItemsForTeller(teller);
+  if (!items.length) { gal.style.display = 'none'; gal.innerHTML = ''; return; }
+  gal.style.display = 'grid';
+  gal.innerHTML = '';
+  const showBadge = (teller === 'Anyone');
+  items.forEach(item => {
+    const thumb = document.createElement('div');
+    thumb.className = 'img-thumb';
+    const im = document.createElement('img');
+    im.src = item.url;
+    im.alt = '';
+    thumb.appendChild(im);
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'del-btn';
+    del.title = 'Remove this Hook photo';
+    del.textContent = '×';
+    del.onclick = () => deleteSingleImage(item.id, item.topic, item.url, item.isDefault);
+    thumb.appendChild(del);
+    if (showBadge && item.label) {
+      const badge = document.createElement('div');
+      badge.className = 'topic-badge';
+      badge.textContent = item.label;
+      thumb.appendChild(badge);
+    }
+    gal.appendChild(thumb);
+  });
+}
+
+function renderGallery() {
+  const gal = $('imgGallery');
+  const t = topicSel.value;
+  const items = imageItemsFor(t);
+  if (!items.length) { gal.style.display = 'none'; gal.innerHTML = ''; return; }
+  gal.style.display = 'grid';
+  gal.innerHTML = '';
+  const showBadge = !!LIB.topics[t]?.any;
+  items.forEach(item => {
+    const thumb = document.createElement('div');
+    thumb.className = 'img-thumb';
+    const im = document.createElement('img');
+    im.src = item.url;
+    im.alt = '';
+    thumb.appendChild(im);
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'del-btn';
+    del.title = 'Remove this image';
+    del.textContent = '×';
+    del.onclick = () => deleteSingleImage(item.id, item.topic, item.url, item.isDefault);
+    thumb.appendChild(del);
+    if (showBadge) {
+      const badge = document.createElement('div');
+      badge.className = 'topic-badge';
+      badge.textContent = item.topic;
+      thumb.appendChild(badge);
+    }
+    gal.appendChild(thumb);
+  });
+}
+
+function renderAppGallery() {
+  const gal = $('appImgGallery');
+  const items = appImageItems();
+  if (!items.length) { gal.style.display = 'none'; gal.innerHTML = ''; return; }
+  gal.style.display = 'grid';
+  gal.innerHTML = '';
+  items.forEach(item => {
+    const thumb = document.createElement('div');
+    thumb.className = 'img-thumb';
+    const im = document.createElement('img');
+    im.src = item.url;
+    im.alt = '';
+    thumb.appendChild(im);
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'del-btn';
+    del.title = 'Delete this 3rdi image';
+    del.textContent = '×';
+    del.onclick = () => deleteSingleImage(item.id, item.topic, item.url, item.isDefault);
+    thumb.appendChild(del);
+    gal.appendChild(thumb);
+  });
+}
+
+function refresh() {
+  const t = topicSel.value;
+  const teller = tellerSel.value;
+  const hn = hookImagesForTeller(teller).length;
+  const n = imagesFor(t).length;
+  const an = appImages().length;
+
+  $('badgeHookCount').textContent = hn;
+  $('badgeTopicCount').textContent = n;
+  $('badgeAppCount').textContent = an;
+
+  $('hookDrawerTitle').textContent = `Hook Images for "${teller}" (Slide 1)`;
+  $('topicDrawerTitle').textContent = `Topic Images for "${t}" (Tips & Closer)`;
+
+  $('hookImgCount').textContent = `${hn} Hook photo${hn === 1 ? '' : 's'} saved for narrator "${teller}"`;
+  $('imgCount').textContent = `${n} Topic photo${n === 1 ? '' : 's'} saved for "${t}"`;
+  $('appImgCount').textContent = `${an} 3rdi photo${an === 1 ? '' : 's'} saved for Slide 4`;
+  $('story').classList.toggle('show', !!LIB.tellers[teller]?.templated);
+  renderHookGallery();
+  renderGallery();
+  renderAppGallery();
+}
+
+function fillStory(s) {
+  return s.replace(/\{who\}/g, $('sWho').value.trim() || 'relative')
+          .replace(/\{job\}/g, $('sJob').value.trim() || 'my job')
+          .replace(/\{years\}/g, $('sYears').value.trim() || 'many');
+}
+
+const DB_NAME = 'slideshow_generator_db_v15';
+const STORE_NAME = 'topic_images_jpeg';
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    try {
+      if (typeof indexedDB === 'undefined') return reject(new Error('No IndexedDB'));
+      const req = indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
+async function saveFilesAsJpeg(topicKey, files) {
+  const added = [];
+  let db = null;
+  try { db = await openDB(); } catch (e) {}
+
+  for (const file of files) {
+    const dataUrl = await fileToJpegDataUrl(file);
+    if (db) {
+      try {
+        await new Promise((res, rej) => {
+          const tx = db.transaction(STORE_NAME, 'readwrite');
+          const store = tx.objectStore(STORE_NAME);
+          const r = store.add({ topic: topicKey, dataUrl });
+          r.onsuccess = () => {
+            added.push({ id: r.result, url: dataUrl, topic: topicKey });
+            res();
+          };
+          r.onerror = () => rej(r.error);
+        });
+        continue;
+      } catch (e) {}
+    }
+    added.push({ id: 'mem_' + Date.now() + '_' + Math.random(), url: dataUrl, topic: topicKey });
+  }
+  return added;
+}
+
+async function loadImagesFromDB() {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    const req = store.getAll();
+    req.onsuccess = () => {
+      for (const item of req.result || []) {
+        if (!uploaded[item.topic]) uploaded[item.topic] = [];
+        const url = item.dataUrl || (item.blob ? URL.createObjectURL(item.blob) : null);
+        if (url) {
+          uploaded[item.topic].push({
+            id: item.id,
+            url,
+            topic: item.topic
+          });
+        }
+      }
+      refresh();
+      render();
+    };
+    req.onerror = () => render();
+  } catch (err) {
+    render();
+  }
+}
+
+async function deleteImageFromDB(id) {
+  if (typeof id !== 'number') return;
+  const db = await openDB();
+  const tx = db.transaction(STORE_NAME, 'readwrite');
+  const store = tx.objectStore(STORE_NAME);
+  store.delete(id);
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function deleteSingleImage(id, topicKey, url, isDefault) {
+  if (isDefault) {
+    if (!removedDefaults[topicKey]) removedDefaults[topicKey] = [];
+    removedDefaults[topicKey].push(url);
+  } else if (uploaded[topicKey]) {
+    uploaded[topicKey] = uploaded[topicKey].filter(x => x.id !== id);
+  }
+  try { await deleteImageFromDB(id); } catch (err) {}
+  refresh();
+  if (currentState) {
+    const pool = imagesFor(currentState.topic);
+    const hPool = hookImagesForTeller(currentState.teller);
+    const appPool = appImages();
+    currentState.slides.forEach(s => {
+      if (s.img === url) {
+        if (s.label === 'Hook') s.img = hPool.length ? pick(hPool, 1)[0] : null;
+        else if (s.label === 'App') s.img = appPool.length ? pick(appPool, 1)[0] : null;
+        else s.img = pool.length ? pick(pool, 1)[0] : null;
+      }
+    });
+    renderFromState();
+  }
+}
+
+async function clearImagesInDB(keyOrName, isHookTeller = false) {
+  const db = await openDB();
+  const tx = db.transaction(STORE_NAME, 'readwrite');
+  const store = tx.objectStore(STORE_NAME);
+  const req = store.openCursor();
+  req.onsuccess = e => {
+    const cursor = e.target.result;
+    if (cursor) {
+      const k = String(cursor.value.topic || '');
+      if (keyOrName === APP_IMG_KEY) {
+        if (k === APP_IMG_KEY) cursor.delete();
+      } else if (isHookTeller) {
+        if (keyOrName === 'Anyone') {
+          if (k.startsWith(HOOK_TELLER_PREFIX)) cursor.delete();
+        } else if (k === hookTellerKey(keyOrName)) {
+          cursor.delete();
+        }
+      } else {
+        if (LIB.topics[keyOrName]?.any) {
+          if (k !== APP_IMG_KEY && !k.startsWith(HOOK_TELLER_PREFIX)) cursor.delete();
+        } else if (k === keyOrName) {
+          cursor.delete();
+        }
+      }
+      cursor.continue();
+    }
+  };
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+$('uploadHook').onchange = async e => {
+  const teller = tellerSel.value;
+  const key = hookTellerKey(teller);
+  const files = [...e.target.files];
+  if (!files.length) return;
+  e.target.value = '';
+  const added = await saveFilesAsJpeg(key, files);
+  uploaded[key] = [...(uploaded[key] || []), ...added];
+  refresh();
+  if (currentState) {
+    const hPool = hookImagesForTeller(currentState.teller);
+    currentState.slides.forEach(s => {
+      if (s.label === 'Hook' && hPool.length) s.img = hPool[hPool.length - 1];
+    });
+    renderFromState();
+  }
+};
+
+$('upload').onchange = async e => {
+  const t = topicSel.value;
+  const files = [...e.target.files];
+  if (!files.length) return;
+  e.target.value = '';
+  const added = await saveFilesAsJpeg(t, files);
+  uploaded[t] = [...(uploaded[t] || []), ...added];
+  refresh();
+  if (currentState) {
+    const pool = imagesFor(currentState.topic);
+    currentState.slides.forEach((s, i) => {
+      if (s.label !== 'App' && s.label !== 'Hook' && !s.img && pool.length) s.img = pool[i % pool.length];
+    });
+    renderFromState();
+  }
+};
+
+$('uploadApp').onchange = async e => {
+  const files = [...e.target.files];
+  if (!files.length) return;
+  e.target.value = '';
+  const added = await saveFilesAsJpeg(APP_IMG_KEY, files);
+  uploaded[APP_IMG_KEY] = [...(uploaded[APP_IMG_KEY] || []), ...added];
+  refresh();
+  if (currentState) {
+    const appPool = appImages();
+    currentState.slides.forEach(s => {
+      if (s.label === 'App' && appPool.length) s.img = pick(appPool, 1)[0];
+    });
+    renderFromState();
+  }
+};
+
+$('clearHookImgs').onclick = async () => {
+  const teller = tellerSel.value;
+  if (teller === 'Anyone') {
+    Object.keys(uploaded).forEach(k => { if (k.startsWith(HOOK_TELLER_PREFIX)) uploaded[k] = []; });
+  } else {
+    const key = hookTellerKey(teller);
+    uploaded[key] = [];
+    removedDefaults[key] = [];
+  }
+  refresh();
+  try { await clearImagesInDB(teller, true); } catch (err) {}
+  if (currentState) render();
+};
+
+$('clearImgs').onclick = async () => {
+  const t = topicSel.value;
+  if (LIB.topics[t]?.any) {
+    Object.keys(uploaded).forEach(k => {
+      if (k !== APP_IMG_KEY && !k.startsWith(HOOK_TELLER_PREFIX)) uploaded[k] = [];
+    });
+  } else {
+    uploaded[t] = [];
+    removedDefaults[t] = [];
+  }
+  refresh();
+  try { await clearImagesInDB(t, false); } catch (err) {}
+  if (currentState) render();
+};
+
+$('clearAppImgs').onclick = async () => {
+  uploaded[APP_IMG_KEY] = [];
+  removedDefaults[APP_IMG_KEY] = [];
+  refresh();
+  try { await clearImagesInDB(APP_IMG_KEY, false); } catch (err) {}
+  if (currentState) {
+    currentState.slides.forEach(s => { if (s.label === 'App') s.img = null; });
+    renderFromState();
+  }
+};
+
+// Export complete standalone HTML with all uploaded photos permanently baked into DEFAULT_LIB
+$('exportHtmlBtn').onclick = () => {
+  const exportLib = JSON.parse(JSON.stringify(LIB));
+  if (!exportLib.tellerHookImages) exportLib.tellerHookImages = {};
+  Object.keys(exportLib.tellers).forEach(tellerName => {
+    const hKey = hookTellerKey(tellerName);
+    const defaults = (LIB.tellerHookImages?.[tellerName] || []).filter(u => !(removedDefaults[hKey] || []).includes(u));
+    const custom = (uploaded[hKey] || []).map(x => x.url);
+    exportLib.tellerHookImages[tellerName] = [...defaults, ...custom];
+  });
+  Object.keys(exportLib.topics).forEach(t => {
+    const tDefaults = (LIB.topics[t]?.images || []).filter(u => !(removedDefaults[t] || []).includes(u));
+    const tCustom = (uploaded[t] || []).map(x => x.url);
+    exportLib.topics[t].images = [...tDefaults, ...tCustom];
+  });
+  exportLib.appImages = appImages();
+
+  const fullDoc = document.documentElement.outerHTML;
+  const startMarker = '/*__DEFAULT_LIB_START__*/';
+  const endMarker = '/*__DEFAULT_LIB_END__*/';
+  const sIdx = fullDoc.indexOf(startMarker);
+  const eIdx = fullDoc.indexOf(endMarker);
+  if (sIdx === -1 || eIdx === -1) {
+    alert('Could not build HTML export.');
+    return;
+  }
+  const replacement = startMarker + '\nconst DEFAULT_LIB = ' + JSON.stringify(exportLib, null, 2) + ';\n';
+  const newHtml = '<!DOCTYPE html>\n' + fullDoc.slice(0, sIdx) + replacement + fullDoc.slice(eIdx);
+  const blob = new Blob([newHtml], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'slideshow-generator-saved.html';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+};
+
+topicSel.onchange = () => { refresh(); render(); };
+tellerSel.onchange = () => { refresh(); render(); };
+$('sWho').oninput = () => { refresh(); };
+
+document.querySelectorAll('#slideCount button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('#slideCount button').forEach(x => x.classList.remove('on'));
+  b.classList.add('on');
+  slideChoice = Number(b.dataset.n);
+  render();
+});
+
+function getHookPool(topic, teller) {
+  const T = LIB.topics[topic] || {}, N = LIB.tellers[teller] || {};
+  if (N.templated) {
+    const pool = T.hooks || [];
+    return (pool.length ? pool : ['My {who} spent {years} years as {job}. These are their rules']).map(fillStory);
+  } else if (N.hooks || N.who) {
+    const pool = [...(N.hooks || []), ...((T.hooks || []).map(h => h.replace(/\{who\}/g, N.who || 'relative').replace(/\{job\}/g, N.job || 'my job').replace(/\{years\}/g, N.years || '26')))];
+    return pool.length ? pool : (T.genericHooks || ['(add hooks for this topic)']);
+  } else {
+    return T.genericHooks || ['(add genericHooks for this topic)'];
+  }
+}
+
+function getCloserPool(teller) {
+  const N = LIB.tellers[teller] || {};
+  const pool = N.closers || ['(add closers for this narrator)'];
+  return N.templated ? pool.map(fillStory) : pool;
+}
+
+function build() {
+  const rawTopic = topicSel.value, rawTeller = tellerSel.value;
+
+  // "Any topic" randomly picks ONE coherent topic for the slideshow instead of mixing tips from all topics
+  const specTopics = specificTopicsList();
+  const topic = (LIB.topics[rawTopic]?.any && specTopics.length) ? pick(specTopics, 1)[0] : rawTopic;
+
+  // "Anyone" randomly picks ONE coherent "Told by" narrator for the slideshow
+  const specTellers = specificTellersList();
+  const teller = (rawTeller === 'Anyone' && specTellers.length) ? pick(specTellers, 1)[0] : rawTeller;
+
+  const N = LIB.tellers[teller] || {};
+  const total = slideChoice || 7;
+  const warnings = [];
+
+  if (N.templated && (!$('sWho').value.trim() || !$('sJob').value.trim())) {
+    warnings.push('Fill in Who and Job so the hook and closer use your real story.');
+  }
+
+  const hook = pick(getHookPool(topic, teller), 1)[0];
+  const closer = pick(getCloserPool(teller), 1)[0];
+
+  const needed = total - 3;
+  const pool = tipsFor(topic);
+  let tips = pick(pool, needed);
+  if (tips.length < needed) warnings.push(`Only ${tips.length} tips available for "${topic}".`);
+
+  const app = pick(LIB.app || ['(add app text)'], 1)[0];
+  const slides = [{ label: 'Hook', text: hook, copied: false, downloaded: false }];
+  const before = tips.slice(0, 2), after = tips.slice(2);
+  before.forEach(t => slides.push({ label: 'Tip', text: t, rawTip: t, copied: false, downloaded: false }));
+  slides.push({ label: 'App', text: app, copied: false, downloaded: false });
+  after.forEach(t => slides.push({ label: 'Tip', text: t, rawTip: t, copied: false, downloaded: false }));
+  slides.push({ label: 'Closer', text: closer, copied: false, downloaded: false });
+
+  let n = 0;
+  slides.forEach(s => {
+    if (s.label === 'Tip') {
+      n++;
+      s.tipNum = n;
+      s.text = `${n}. ${s.rawTip}`;
+    }
+  });
+
+  // Hook images come from the chosen "Told by" narrator (falling back to "Anyone" hook uploads if none uploaded for that specific narrator yet)
+  let hookImgs = shuffle(hookImagesForTeller(teller));
+  if (!hookImgs.length && rawTeller === 'Anyone') {
+    hookImgs = shuffle(hookImagesForTeller('Anyone'));
+  }
+
+  // Topic images come from the chosen topic (falling back to "Any topic" uploads if none uploaded for that specific topic yet)
+  let imgs = shuffle(imagesFor(topic));
+  if (!imgs.length && LIB.topics[rawTopic]?.any) {
+    imgs = shuffle(imagesFor('Any topic'));
+  }
+
+  const appImgs = shuffle(appImages());
+
+  let generalIdx = 0;
+  slides.forEach(s => {
+    if (s.label === 'Hook') {
+      s.img = hookImgs.length ? hookImgs[0] : null;
+    } else if (s.label === 'App') {
+      s.img = appImgs.length ? appImgs[0] : null;
+    } else {
+      s.img = imgs.length ? imgs[generalIdx % imgs.length] : null;
+      generalIdx++;
+    }
+  });
+
+  const caps = LIB.captions || [];
+  const cap = caps.length ? pick(caps, 1)[0] : { title: '', description: '', comment: '' };
+  return { slides, warnings, topic, teller, rawTopic, rawTeller, cap };
+}
+
+function rerollSlideText(idx) {
+  if (!currentState) return;
+  const s = currentState.slides[idx];
+  const { topic, teller } = currentState;
+
+  if (s.label === 'Hook') {
+    const pool = getHookPool(topic, teller);
+    const others = pool.filter(h => h !== s.text);
+    s.text = pick(others.length ? others : pool, 1)[0];
+  } else if (s.label === 'Tip') {
+    const usedTips = new Set(currentState.slides.filter(x => x.label === 'Tip').map(x => x.rawTip));
+    const pool = tipsFor(topic);
+    const others = pool.filter(t => !usedTips.has(t));
+    const chosen = pick(others.length ? others : pool, 1)[0];
+    if (chosen) {
+      s.rawTip = chosen;
+      s.text = `${s.tipNum}. ${chosen}`;
+    }
+  } else if (s.label === 'App') {
+    const pool = LIB.app || ['(add app text)'];
+    const others = pool.filter(a => a !== s.text);
+    s.text = pick(others.length ? others : pool, 1)[0];
+  } else if (s.label === 'Closer') {
+    const pool = getCloserPool(teller);
+    const others = pool.filter(c => c !== s.text);
+    s.text = pick(others.length ? others : pool, 1)[0];
+  }
+  s.copied = false;
+  renderFromState();
+}
+
+function rerollSlideImage(idx) {
+  if (!currentState) return;
+  const s = currentState.slides[idx];
+  let pool = [];
+  if (s.label === 'Hook') {
+    pool = hookImagesForTeller(currentState.teller);
+    if (!pool.length) pool = hookImagesForTeller(tellerSel.value);
+  } else if (s.label === 'App') {
+    pool = appImages();
+  } else {
+    pool = imagesFor(currentState.topic);
+    if (!pool.length) pool = imagesFor(topicSel.value);
+  }
+  if (!pool.length) {
+    toggleDrawer(s.label === 'Hook' ? 'hook' : s.label === 'App' ? 'app' : 'topic');
+    return;
+  }
+  const others = pool.filter(u => u !== s.img);
+  s.img = pick(others.length ? others : pool, 1)[0];
+  s.downloaded = false;
+  renderFromState();
+}
+
+function dataUrlToFile(dataUrl, filename) {
+  const parts = dataUrl.split(',');
+  const mime = (parts[0].match(/:(.*?);/) || [])[1] || 'image/jpeg';
+  const bstr = atob(parts[1]);
+  let n = bstr.length;
+  const u8 = new Uint8Array(n);
+  while (n--) u8[n] = bstr.charCodeAt(n);
+  return new File([u8], filename, { type: mime });
+}
+
+async function urlToFile(url, filename) {
+  if (url.startsWith('data:')) return dataUrlToFile(url, filename);
+  const res = await fetch(url);
+  const blob = await res.blob();
+  return new File([blob], filename, { type: blob.type || 'image/jpeg' });
+}
+
+function isIOSDevice() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function canUseFileShare(files) {
+  try {
+    return typeof navigator.share === 'function' &&
+      typeof navigator.canShare === 'function' &&
+      navigator.canShare({ files });
+  } catch (e) {
+    return false;
+  }
+}
+
+function triggerFileBlobDownload(file, filename) {
+  const blobUrl = URL.createObjectURL(file);
+  const a = document.createElement('a');
+  a.href = blobUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 3000);
+}
+
+// Download raw background image only (no text overlay) + mark checkmark
+async function downloadBackgroundImage(slide, filename, onDone) {
+  if (!slide.img) return;
+  try {
+    const file = await urlToFile(slide.img, filename);
+    if (isIOSDevice() && canUseFileShare([file])) {
+      try {
+        await navigator.share({ files: [file] });
+        slide.downloaded = true;
+        if (onDone) onDone();
+        return;
+      } catch (shareErr) {
+        if (shareErr && shareErr.name === 'AbortError') return;
+      }
+    }
+    triggerFileBlobDownload(file, filename);
+    slide.downloaded = true;
+    if (onDone) onDone();
+  } catch (err) {
+    const a = document.createElement('a');
+    a.href = slide.img;
+    a.download = filename;
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    slide.downloaded = true;
+    if (onDone) onDone();
+  }
+}
+
+// Download all background images at the same time
+async function downloadAllBackgroundImages() {
+  if (!currentState) return;
+  const slidesWithImgs = currentState.slides
+    .map((s, idx) => ({ slide: s, idx }))
+    .filter(x => !!x.slide.img);
+
+  if (!slidesWithImgs.length) {
+    alert('No background images uploaded for these slides yet. Tap Hook Images, Topic Images, or 3rdi Images above to add photos.');
+    return;
+  }
+
+  try {
+    const files = [];
+    for (const item of slidesWithImgs) {
+      const num = String(item.idx + 1).padStart(2, '0');
+      const fname = `bg-slide-${num}.jpg`;
+      const f = await urlToFile(item.slide.img, fname);
+      files.push(f);
+    }
+
+    if (isIOSDevice() && canUseFileShare(files)) {
+      try {
+        await navigator.share({ files });
+        slidesWithImgs.forEach(x => { x.slide.downloaded = true; });
+        renderFromState();
+        return;
+      } catch (shareErr) {
+        if (shareErr && shareErr.name === 'AbortError') return;
+      }
+    }
+
+    for (let i = 0; i < files.length; i++) {
+      triggerFileBlobDownload(files[i], files[i].name);
+      slidesWithImgs[i].slide.downloaded = true;
+      await new Promise(r => setTimeout(r, 240));
+    }
+    renderFromState();
+  } catch (err) {
+    alert('Could not download all background images.');
+  }
+}
+
+function writeClipboard(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(text).catch(() => fallbackWriteClipboard(text));
+  }
+  return Promise.resolve(fallbackWriteClipboard(text));
+}
+
+function fallbackWriteClipboard(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); } catch (e) {}
+  ta.remove();
+}
+
+const ICO_COPY = `<svg class="ico" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+const ICO_DL = `<svg class="ico" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`;
+const ICO_CHECK = `<svg class="ico" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+const ICO_PHOTOS = `<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>`;
+
+function renderFromState() {
+  if (!currentState) return;
+  const { slides, warnings, topic, teller, cap } = currentState;
+  output.innerHTML = '';
+
+  // Active Topic & Told By indicator banner (shows which random Topic / Narrator was chosen when "Any topic" or "Anyone" is active)
+  const chosenBar = document.createElement('div');
+  chosenBar.style.cssText = 'display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px; font-size:12.5px; color:var(--muted);';
+  chosenBar.innerHTML = `<span>Showing:</span> <span class="tag tag-hook">${esc(teller)}</span> <span class="tag">${esc(topic)}</span> <span class="muted">(${slides.length} slides)</span>`;
+  output.appendChild(chosenBar);
+
+  if (warnings.length) {
+    const warnBox = document.createElement('div');
+    warnBox.className = 'panel';
+    warnBox.innerHTML = warnings.map(w => `<div class="warn" style="margin:2px 0;">${esc(w)}</div>`).join('');
+    output.appendChild(warnBox);
+  }
+
+  // Top batch action bar: Download all background images & Copy all text
+  const topBar = document.createElement('div');
+  topBar.className = 'top-actions';
+  const allDownloaded = slides.some(s => s.img) && slides.filter(s => s.img).every(s => s.downloaded);
+  const allCopied = slides.length > 0 && slides.every(s => s.copied);
+
+  topBar.innerHTML = `
+    <button type="button" class="primary" id="dlAllBtn">${allDownloaded ? ICO_CHECK : ICO_PHOTOS}<span>${allDownloaded ? '✓ All Images Saved' : 'Download all images'}</span></button>
+    <button type="button" id="copyAllSlidesBtn" class="${allCopied ? 'done' : ''}">${allCopied ? ICO_CHECK : ICO_COPY}<span>${allCopied ? '✓ All Text Copied' : 'Copy all text'}</span></button>
+  `;
+  output.appendChild(topBar);
+
+  topBar.querySelector('#dlAllBtn').onclick = downloadAllBackgroundImages;
+  topBar.querySelector('#copyAllSlidesBtn').onclick = async () => {
+    const allSlideText = slides.map((s, idx) => `Slide ${idx + 1} (${s.label}):\n${s.text}`).join('\n\n');
+    await writeClipboard(allSlideText);
+    slides.forEach(s => { s.copied = true; });
+    renderFromState();
+  };
+
+  // Option 3 Ultra-Compact List Stack
+  const stack = document.createElement('div');
+  stack.className = 'list-stack';
+
+  slides.forEach((s, i) => {
+    const numStr = String(i + 1).padStart(2, '0');
+    const row = document.createElement('div');
+    row.className = 'slide-row';
+
+    // Left: compact square thumbnail preview (tapping shuffles photo or opens drawer if empty)
+    const thumb = document.createElement('div');
+    thumb.className = 'thumb-box';
+    thumb.title = s.img ? 'Tap to shuffle background photo' : 'Tap to upload background photos';
+    if (s.img) {
+      const im = document.createElement('img');
+      im.src = s.img;
+      im.alt = '';
+      thumb.appendChild(im);
+      const miniReroll = document.createElement('div');
+      miniReroll.className = 'reroll-photo-mini';
+      miniReroll.textContent = '↻';
+      thumb.appendChild(miniReroll);
+    } else {
+      const empty = document.createElement('div');
+      empty.className = 'empty-lbl';
+      empty.textContent = s.label === 'Hook' ? '+ Hook Photo' : s.label === 'App' ? '+ 3rdi Photo' : '+ Topic Photo';
+      thumb.appendChild(empty);
+    }
+    thumb.onclick = () => rerollSlideImage(i);
+    row.appendChild(thumb);
+
+    // Middle: slide number + tag + ↻ Text button + editable text
+    const mid = document.createElement('div');
+    mid.className = 'slide-mid';
+
+    const tagClass = s.label === 'Hook' ? 'tag tag-hook' : s.label === 'App' ? 'tag tag-app' : 'tag';
+    const metaBar = document.createElement('div');
+    metaBar.className = 'slide-meta-bar';
+    metaBar.innerHTML = `<span class="slide-num">${numStr}</span><span class="${tagClass}">${esc(s.label === 'App' ? '3rdi' : s.label)}</span>`;
+
+    const rTextBtn = document.createElement('button');
+    rTextBtn.type = 'button';
+    rTextBtn.className = 'mini-reroll';
+    rTextBtn.textContent = '↻ Text';
+    rTextBtn.title = 'Shuffle text for this slide';
+    rTextBtn.onclick = () => rerollSlideText(i);
+    metaBar.appendChild(rTextBtn);
+    mid.appendChild(metaBar);
+
+    const textEl = document.createElement('div');
+    textEl.className = 'slide-text';
+    textEl.contentEditable = 'true';
+    textEl.spellcheck = false;
+    textEl.textContent = s.text;
+    textEl.oninput = () => {
+      s.text = textEl.innerText;
+      s.copied = false;
+      copyBtn.classList.remove('done');
+      copyBtn.innerHTML = `${ICO_COPY}<span>Copy<br>Text</span>`;
+    };
+    mid.appendChild(textEl);
+    row.appendChild(mid);
+
+    // Right: Option 3 compact action buttons with persistent green checkmark
+    const actions = document.createElement('div');
+    actions.className = 'row-actions';
+
+    const copyBtn = document.createElement('button');
+    copyBtn.type = 'button';
+    copyBtn.className = 'act-btn' + (s.copied ? ' done' : '');
+    copyBtn.innerHTML = s.copied ? `${ICO_CHECK}<span>Copied</span>` : `${ICO_COPY}<span>Copy<br>Text</span>`;
+    copyBtn.onclick = async () => {
+      await writeClipboard(s.text);
+      s.copied = true;
+      copyBtn.className = 'act-btn done';
+      copyBtn.innerHTML = `${ICO_CHECK}<span>Copied</span>`;
+    };
+    actions.appendChild(copyBtn);
+
+    const dlBtn = document.createElement('button');
+    dlBtn.type = 'button';
+    dlBtn.className = 'act-btn' + (s.downloaded ? ' done' : '');
+    dlBtn.disabled = !s.img;
+    dlBtn.innerHTML = s.downloaded ? `${ICO_CHECK}<span>Saved</span>` : `${ICO_DL}<span>Download<br>Image</span>`;
+    dlBtn.onclick = () => {
+      downloadBackgroundImage(s, `bg-slide-${numStr}.jpg`, () => {
+        dlBtn.className = 'act-btn done';
+        dlBtn.innerHTML = `${ICO_CHECK}<span>Saved</span>`;
+      });
+    };
+    actions.appendChild(dlBtn);
+
+    row.appendChild(actions);
+    stack.appendChild(row);
+  });
+
+  output.appendChild(stack);
+
+  // Caption & Post Text panel with checkmark feedback
+  const cp = document.createElement('div');
+  cp.className = 'panel';
+  cp.style.marginTop = '14px';
+  cp.innerHTML = `<div class="row" style="justify-content:space-between; align-items:center; margin-bottom:6px;">
+      <strong>Caption &amp; Post Text</strong>
+      <button type="button" class="sm" id="copyAllCap">Copy all</button>
+    </div>
+    <div class="row" style="justify-content:space-between; align-items:center; margin:6px 0 3px;">
+      <span class="muted">Title</span>
+      <button type="button" class="sm" id="copyTitle">Copy title</button>
+    </div>
+    <div class="caption-box">${esc(cap.title)}</div>
+    <div class="row" style="justify-content:space-between; align-items:center; margin:8px 0 3px;">
+      <span class="muted">Caption (Description)</span>
+      <button type="button" class="sm" id="copyDesc">Copy caption</button>
+    </div>
+    <div class="caption-box">${esc(cap.description)}</div>
+    <div class="row" style="justify-content:space-between; align-items:center; margin:8px 0 3px;">
+      <span class="muted">Pinned comment</span>
+      <button type="button" class="sm" id="copyComment">Copy pinned comment</button>
+    </div>
+    <div class="caption-box">${esc(cap.comment)}</div>`;
+  output.appendChild(cp);
+
+  const bindCapCopy = (sel, text) => {
+    const b = cp.querySelector(sel);
+    b.onclick = async () => {
+      await writeClipboard(text);
+      b.style.borderColor = '#10b981';
+      b.style.color = '#34d399';
+      b.textContent = '✓ Copied';
+    };
+  };
+  bindCapCopy('#copyTitle', cap.title);
+  bindCapCopy('#copyDesc', cap.description);
+  bindCapCopy('#copyComment', cap.comment);
+  bindCapCopy('#copyAllCap', `${cap.title}\n\n${cap.description}\n\nPinned comment: ${cap.comment}`);
+}
+
+function render() {
+  currentState = build();
+  renderFromState();
+}
+
+const jsBanner = $('jsDisabledBanner');
+if (jsBanner) jsBanner.style.display = 'none';
+
+$('shuffle').addEventListener('click', render);
+$('shuffle').onclick = render;
+fillSelects();
+render();
+loadImagesFromDB();
+</script>
+</body>
+</html>
